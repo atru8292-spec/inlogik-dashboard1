@@ -13,6 +13,7 @@ import {
   Copy,
   ExternalLink,
   Filter,
+  Languages,
   Mail,
   MessageSquare,
   RefreshCw,
@@ -232,12 +233,36 @@ function InboxCard({
   const [sendResult,   setSendResult]   = useState<{ ok: boolean; note: string } | null>(null);
   const [copied,       setCopied]       = useState(false);
   const [marked,       setMarked]       = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
 
   const age      = ageLabel(item.received_at);
   const typeInfo = TYPE_LABELS[item.question_type];
   const tpl      = TEMPLATES[item.question_type];
   const preview  = item.body_text.slice(0, 220).replace(/\n+/g, " ").trim();
   const hasMore  = item.body_text.length > 220;
+  
+  // Detect non-Russian text for translate button
+  const cyrCount = (item.body_text.match(/[а-яёА-ЯЁ]/g) || []).length;
+  const isNonRussian = cyrCount / Math.max(item.body_text.length, 1) < 0.3 && item.body_text.length > 30;
+
+  const handleTranslate = async () => {
+    if (translating || translatedText) return;
+    setTranslating(true);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: item.body_text.slice(0, 3000) }),
+      });
+      const data = await res.json();
+      if (data.translated) setTranslatedText(data.translated);
+    } catch (e) {
+      console.warn("translate failed", e);
+    } finally {
+      setTranslating(false);
+    }
+  };
 
   const selectedLogist = logists.find((l) => l.id === logistId);
   const logistName  = selectedLogist ? selectedLogist.full_name : customName;
@@ -342,6 +367,13 @@ function InboxCard({
                 {item.logist}
               </span>
             )}
+            {/* ── Бейдж автора запроса ── */}
+            {item.author && (
+              <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-inlogik-50 text-inlogik-700 border border-inlogik-200">
+                ✍️
+                {item.author}
+              </span>
+            )}
           </div>
 
           <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
@@ -366,11 +398,38 @@ function InboxCard({
               {expanded ? item.body_text : preview}
               {hasMore && !expanded && <span className="text-slate-400">…</span>}
             </p>
-            {hasMore && (
-              <button onClick={() => setExpanded(!expanded)}
-                className="mt-1 flex items-center gap-1 text-xs text-inlogik-600 hover:text-inlogik-800 transition">
-                {expanded ? <><ChevronUp className="h-3 w-3" />Свернуть</> : <><ChevronDown className="h-3 w-3" />Показать полностью</>}
-              </button>
+            <div className="flex items-center gap-2 mt-1">
+              {hasMore && (
+                <button onClick={() => setExpanded(!expanded)}
+                  className="flex items-center gap-1 text-xs text-inlogik-600 hover:text-inlogik-800 transition">
+                  {expanded ? <><ChevronUp className="h-3 w-3" />Свернуть</> : <><ChevronDown className="h-3 w-3" />Показать полностью</>}
+                </button>
+              )}
+              {isNonRussian && !translatedText && (
+                <button
+                  onClick={handleTranslate}
+                  disabled={translating}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition disabled:opacity-50"
+                >
+                  <Languages className="h-3 w-3" />
+                  {translating ? "Перевожу…" : "Перевести"}
+                </button>
+              )}
+            </div>
+            {translatedText && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Languages className="h-3 w-3 text-blue-500" />
+                  <span className="text-[11px] font-medium text-blue-600">Перевод</span>
+                  <button
+                    onClick={() => setTranslatedText(null)}
+                    className="ml-auto text-[11px] text-blue-400 hover:text-blue-600"
+                  >
+                    скрыть
+                  </button>
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{translatedText}</p>
+              </div>
             )}
           </div>
         </div>
@@ -638,7 +697,7 @@ export function InboxView({ initialItems }: { initialItems: InboxItem[] }) {
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter((i) =>
-        [i.contractor_name, i.contractor_email, i.request_code, i.route, i.body_text, i.logist]
+        [i.contractor_name, i.contractor_email, i.request_code, i.route, i.body_text, i.logist, i.author]
           .filter(Boolean).join(" ").toLowerCase().includes(q)
       );
     }
@@ -791,7 +850,7 @@ export function InboxView({ initialItems }: { initialItems: InboxItem[] }) {
             <p className="text-slate-500 text-sm">
               {isAnyFilterActive
                 ? "Ничего не найдено. Попробуйте изменить фильтр."
-                : "Нет писем, требующих ответа. Всё обработано! ✅"}
+                : "Нет писем, требующих ответа. Всё обработано!"}
             </p>
           </div>
         ) : (

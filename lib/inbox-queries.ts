@@ -15,6 +15,7 @@ export type InboxItem = {
   request_id: string | null;
   route: string | null;
   logist: string | null;
+  author: string | null;
   question_type: "hs_code" | "weight" | "route" | "repack" | "price" | "other";
 };
 
@@ -319,11 +320,12 @@ export async function getClarificationsInbox(): Promise<InboxItem[]> {
     ai_origin_city: string | null;
     ai_dest_city: string | null;
     logist: string | null;
+    author: string | null;
   }> = {};
   if (requestIds.length > 0) {
     const { data: requests, error: re } = await supabaseAdmin
       .from("requests")
-      .select("id, request_code, ai_origin_city, ai_dest_city, logist")
+      .select("id, request_code, ai_origin_city, ai_dest_city, logist, author")
       .in("id", requestIds);
     if (re) throw re;
     for (const r of requests || []) {
@@ -366,6 +368,7 @@ export async function getClarificationsInbox(): Promise<InboxItem[]> {
           ? `${request.ai_origin_city ?? "?"} → ${request.ai_dest_city ?? "?"}`
           : null,
       logist: row.assigned_logist ?? request?.logist ?? null,
+      author: request?.author ?? null,
       question_type,
     });
   }

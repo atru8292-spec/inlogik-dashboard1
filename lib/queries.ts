@@ -11,6 +11,7 @@ export type RequestRow = {
   author: string | null;
   logist: string | null;
   status: string;
+  status_1c: string | null;
   ai_transport_mode: string | null;
   ai_origin_city: string | null;
   ai_origin_country: string | null;
@@ -19,8 +20,6 @@ export type RequestRow = {
   ai_cargo_name: string | null;
   ai_incoterms: string | null;
   ai_container_type: string | null;
-  ai_weight_kg: number | null;
-  ai_volume_cbm: number | null;
   received_at: string;
   sent_at: string | null;
   hours_elapsed: number | null;
@@ -28,8 +27,6 @@ export type RequestRow = {
   outreach_sent: number;
   outreach_replied: number;
   outreach_pending: number;
-  last_error: string | null;
-  ai_missing_fields: string[] | null;
 };
 
 export async function getActiveRequests(): Promise<RequestRow[]> {
@@ -71,8 +68,9 @@ export async function getRequestByCode(code: string) {
       id, price, currency, price_unit, estimated_total, transit_days, transit_days_min, transit_days_max,
       incoterms, container_type, valid_until, included, excluded, hidden_cost_warnings,
       notes, ai_confidence, is_best, is_selected, created_at, attachment_urls,
+      summary_human, local_charges_breakdown, freight_amount,
       inbound_message_id,
-      contractor:contractors(id, name, email),
+      contractor:contractors(id, name, email, priority_score),
       inbound:inbound_messages!inbound_message_id(body_text, attachment_urls)
     `)
     .eq("request_id", r.id)
@@ -379,4 +377,17 @@ export async function getFunnel(): Promise<FunnelStep[]> {
   const { data, error } = await supabaseAdmin.rpc("dashboard_funnel");
   if (error) throw error;
   return (data || []) as FunnelStep[];
+}
+
+// ============================================================
+// ARCHIVE (soft-delete: status → archived, data stays in DB)
+// ============================================================
+
+export async function archiveRequest(requestId: string) {
+  const { error } = await supabaseAdmin
+    .from("requests")
+    .update({ status: "archived", updated_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (error) throw error;
+  return { ok: true };
 }

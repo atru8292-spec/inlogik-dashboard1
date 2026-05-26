@@ -131,6 +131,14 @@ export function ContractorDetailView({
   const rr = stats.total_sent > 0
     ? Math.round((stats.total_replied / stats.total_sent) * 100)
     : 0;
+  const winRate = stats.total_quoted > 0
+    ? Math.round((stats.total_wins / stats.total_quoted) * 100)
+    : 0;
+  const avgResponseMin = contractor.avg_response_min || 0;
+  const avgResponseLabel = avgResponseMin > 0
+    ? avgResponseMin < 60 ? `${avgResponseMin} мин` : avgResponseMin < 1440 ? `${Math.round(avgResponseMin / 60)} ч` : `${Math.round(avgResponseMin / 1440)} дн`
+    : "—";
+  const priorityScore = Number(contractor.priority_score ?? 0);
 
   return (
     <div className="space-y-6">
@@ -193,16 +201,52 @@ export function ContractorDetailView({
         </div>
 
         {/* Stats */}
-        <div className="mt-5 pt-5 border-t border-slate-100 grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="mt-5 pt-5 border-t border-slate-100 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat label="Отправлено" value={stats.total_sent} />
           <Stat label="Ответили" value={stats.total_replied} accent="good" />
           <Stat label="Ставок" value={stats.total_quoted} accent="inlogik" />
           <Stat label="Выбрано" value={stats.total_wins} accent="good" />
+        </div>
+        <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat
             label="Response rate"
             value={`${rr}%`}
             accent={rr >= 60 ? "good" : rr >= 30 ? "warn" : "muted"}
           />
+          <Stat
+            label="Win rate"
+            value={`${winRate}%`}
+            accent={winRate >= 30 ? "good" : winRate > 0 ? "warn" : "muted"}
+          />
+          <Stat
+            label="Ср. ответ"
+            value={avgResponseLabel}
+            accent={avgResponseMin > 0 && avgResponseMin < 120 ? "good" : avgResponseMin < 480 ? "warn" : "muted"}
+          />
+          <div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide">Рейтинг</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={cn(
+                "text-2xl font-semibold tabular-nums",
+                priorityScore >= 70 ? "text-emerald-600" : priorityScore >= 40 ? "text-amber-600" : "text-slate-400",
+              )}>
+                {priorityScore > 0 ? priorityScore : "—"}
+              </span>
+              {priorityScore > 0 && (
+                <div className="flex-1 max-w-[80px]">
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        priorityScore >= 70 ? "bg-emerald-500" : priorityScore >= 40 ? "bg-amber-500" : "bg-slate-300",
+                      )}
+                      style={{ width: `${priorityScore}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 

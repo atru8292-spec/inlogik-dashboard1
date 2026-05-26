@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Users, TrendingUp, Star, AlertTriangle, FileText, Ban, BookOpen, Activity, MessageSquarePlus, X, Check, Loader2, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { Users, TrendingUp, Star, AlertTriangle, FileText, Ban, BookOpen, Activity, MessageSquarePlus, X, Check, Loader2, ArrowUpDown, ChevronUp, ChevronDown, UserPlus, Trophy, Moon, Send, CheckCircle2, Coins } from "lucide-react";
 import type { ContractorStats } from "@/lib/queries";
 import { useRealtimeRefresh } from "@/lib/use-realtime";
 import { StatCard } from "./StatCard";
@@ -110,6 +110,7 @@ export function ContractorsView({
   const [isLive, setIsLive] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [quickNote, setQuickNote] = useState<{ id: string; name: string } | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [sortCol, setSortCol] = useState<SortCol>("score");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -210,8 +211,21 @@ export function ContractorsView({
             {stats.length} всего в базе · {active.length} активных
           </p>
         </div>
-        <LiveIndicator isLive={isLive} lastUpdated={lastUpdated} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-inlogik-500 text-white rounded-xl text-sm font-medium hover:bg-inlogik-600 transition"
+          >
+            <UserPlus className="h-4 w-4" />
+            Добавить подрядчика
+          </button>
+          <LiveIndicator isLive={isLive} lastUpdated={lastUpdated} />
+        </div>
       </header>
+
+      {showAddForm && (
+        <AddContractorModal onClose={() => setShowAddForm(false)} onAdded={() => { setShowAddForm(false); refresh(); }} />
+      )}
 
       <div className="flex gap-2 border-b border-slate-200">
         <TabButton
@@ -252,8 +266,8 @@ export function ContractorsView({
         </div>
         {tab === "active" && (
           <div className="flex gap-1.5 shrink-0 overflow-x-auto pb-0.5">
-            <Chip active={activeView === "top"} onClick={() => setActiveView("top")} label="🏆 Лидеры" count={topResponders.length} />
-            <Chip active={activeView === "silent"} onClick={() => setActiveView("silent")} label="😴 Молчуны" count={silent.length} />
+            <Chip active={activeView === "top"} onClick={() => setActiveView("top")} icon={Trophy} label="Лидеры" count={topResponders.length} />
+            <Chip active={activeView === "silent"} onClick={() => setActiveView("silent")} icon={Moon} label="Молчуны" count={silent.length} />
             <Chip active={activeView === "all_active"} onClick={() => setActiveView("all_active")} label="Все активные" count={active.length} />
           </div>
         )}
@@ -275,7 +289,7 @@ export function ContractorsView({
 
         {/* Desktop table */}
         {filtered.length > 0 && (
-          <div className="card overflow-x-auto hidden md:block">
+          <div className="card table-scroll -mx-4 sm:mx-0" style={{ WebkitOverflowScrolling: "touch" }}>
             <ContractorTable
               rows={filtered}
               showStats={tab === "active"}
@@ -347,15 +361,16 @@ function TabButton({ icon: Icon, label, count, active, onClick }: { icon: any; l
   );
 }
 
-function Chip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number; }) {
+function Chip({ active, onClick, label, count, icon: Icon }: { active: boolean; onClick: () => void; label: string; count: number; icon?: React.FC<{ className?: string }> }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition whitespace-nowrap",
+        "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition whitespace-nowrap flex items-center gap-1.5",
         active ? "bg-inlogik-500 text-white border-inlogik-500" : "bg-white text-slate-600 border-slate-200 hover:border-inlogik-300",
       )}
     >
+      {Icon && <Icon className="h-3.5 w-3.5" />}
       {label} <span className="opacity-70">· {count}</span>
     </button>
   );
@@ -401,9 +416,9 @@ function ContractorMobileCard({ c, showStats, onQuickNote }: { c: ContractorStat
         </div>
         {showStats && (
           <div className="mt-3 flex gap-3 text-xs text-slate-600 border-t border-slate-100 pt-2">
-            <span>📤 {c.total_sent} отправлено</span>
-            <span className="text-emerald-600">✅ {c.total_replied} ответили</span>
-            <span className="text-inlogik-600">💰 {c.total_quoted} ставок</span>
+            <span className="flex items-center gap-1"><Send className="h-3 w-3" /> {c.total_sent} отправлено</span>
+            <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {c.total_replied} ответили</span>
+            <span className="text-inlogik-600 flex items-center gap-1"><Coins className="h-3 w-3" /> {c.total_quoted} ставок</span>
           </div>
         )}
         {!showStats && (
@@ -533,5 +548,180 @@ function ContractorTable({
         )}
       </tbody>
     </table>
+  );
+}
+
+// ─── Add Contractor Modal ────────────────────────────────────────────────
+function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
+  const [form, setForm] = useState({
+    name: "", email: "", phone: "",
+    contact_name: "", contact_language: "ru", has_contract: false, notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
+
+  const set = (key: string, val: any) => setForm((f) => ({ ...f, [key]: val }));
+
+  const submit = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      setError("Название и email обязательны");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setDuplicate(null);
+    try {
+      const res = await fetch("/api/contractors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (res.status === 409 && data.existing_id) {
+        setDuplicate({ id: data.existing_id, name: data.existing_name });
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error || "Ошибка при сохранении");
+        return;
+      }
+      onAdded();
+    } catch (e: any) {
+      setError(e.message || "Не удалось сохранить");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">Добавить подрядчика</h2>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Name + Email */}
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Название компании *</label>
+              <input
+                value={form.name} onChange={(e) => set("name", e.target.value)}
+                placeholder="ООО Логистика"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Email *</label>
+              <input
+                type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
+                placeholder="sales@company.com"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              />
+            </div>
+          </div>
+
+          {/* Contact name + Language */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Контактное лицо</label>
+              <input
+                value={form.contact_name} onChange={(e) => set("contact_name", e.target.value)}
+                placeholder="Иван Петров"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Язык</label>
+              <select
+                value={form.contact_language} onChange={(e) => set("contact_language", e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              >
+                <option value="ru">🇷🇺 Русский</option>
+                <option value="en">🇬🇧 English</option>
+                <option value="cn">🇨🇳 中文</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Phone + Contract */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Телефон</label>
+              <input
+                value={form.phone} onChange={(e) => set("phone", e.target.value)}
+                placeholder="+7 999 123-45-67"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              />
+            </div>
+            <div className="flex items-end pb-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox" checked={form.has_contract}
+                  onChange={(e) => set("has_contract", e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-inlogik-500 focus:ring-inlogik-400"
+                />
+                <span className="text-sm text-slate-700">Есть договор</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="text-sm font-medium text-slate-700 mb-1 block">Заметка</label>
+            <textarea
+              value={form.notes} onChange={(e) => set("notes", e.target.value)}
+              placeholder="Специализация, маршруты, особенности…"
+              rows={2}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400 resize-none"
+            />
+          </div>
+
+          {error && (
+            <div className="px-3 py-2 bg-rose-50 text-rose-700 text-sm rounded-xl">
+              {error}
+            </div>
+          )}
+
+          {duplicate && (
+            <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+              <div className="text-sm text-amber-800">
+                Подрядчик с таким email уже есть: <span className="font-semibold">{duplicate.name}</span>
+              </div>
+              <div className="text-sm text-amber-700">
+                Посмотрите его карточку — если нужно, добавьте больше информации.
+              </div>
+              <Link
+                href={`/contractors/${duplicate.id}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-sm font-medium hover:bg-amber-200 transition"
+              >
+                Открыть карточку →
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
+            Отмена
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2 bg-inlogik-500 text-white rounded-xl text-sm font-medium hover:bg-inlogik-600 transition disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {saving ? "Сохраняю…" : "Добавить"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

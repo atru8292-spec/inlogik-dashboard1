@@ -15,8 +15,6 @@ html, body {
   }
   .badge-good { @apply bg-emerald-100 text-emerald-700; }
   .badge-warn { @apply bg-amber-100 text-amber-700; }
-  .badge-violet { @apply bg-violet-100 text-violet-700; }
-  .input-field { @apply border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-200 transition; }
   .badge-bad  { @apply bg-rose-100 text-rose-700; }
   .badge-muted { @apply bg-slate-100 text-slate-600; }
   .badge-inlogik { @apply bg-inlogik-100 text-inlogik-700; }
@@ -47,4 +45,26 @@ html, body {
   .nav-link-active {
     @apply bg-inlogik-50 text-inlogik-700;
   }
+}
+
+/* Always show horizontal scrollbar on tables (Windows fix) */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.table-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
