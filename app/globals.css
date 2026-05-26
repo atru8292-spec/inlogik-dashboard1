@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: #F8FAFA;
+  color: #0F172A;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full text-xs font-medium px-2 py-0.5;
+  }
+  .badge-good { @apply bg-emerald-100 text-emerald-700; }
+  .badge-warn { @apply bg-amber-100 text-amber-700; }
+  .badge-violet { @apply bg-violet-100 text-violet-700; }
+  .input-field { @apply border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-200 transition; }
+  .badge-bad  { @apply bg-rose-100 text-rose-700; }
+  .badge-muted { @apply bg-slate-100 text-slate-600; }
+  .badge-inlogik { @apply bg-inlogik-100 text-inlogik-700; }
+
+  .card {
+    @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+  }
+  .card-padded {
+    @apply card p-5;
+  }
+
+  .stat-card {
+    @apply card-padded flex flex-col gap-1;
+  }
+  .stat-label {
+    @apply text-xs font-medium text-slate-500 uppercase tracking-wide;
+  }
+  .stat-value {
+    @apply text-3xl font-semibold text-slate-900 tabular-nums;
+  }
+  .stat-meta {
+    @apply text-sm text-slate-500;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-inlogik-50 hover:text-inlogik-700 transition;
+  }
+  .nav-link-active {
+    @apply bg-inlogik-50 text-inlogik-700;
+  }
+}
