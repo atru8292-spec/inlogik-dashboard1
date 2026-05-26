@@ -33,6 +33,36 @@ function fixEncoding(text: string): string {
   return text;
 }
 
+// ─── Pick the "best" quote ────────────────────────────────────────────────────
+// Priority: 1) explicitly marked is_best/is_selected in DB
+//           2) cheapest by estimated_total (skip per_kg quotes without estimated_total)
+//           3) cheapest by raw price as last resort
+function pickBestQuote(quotes: any[]): any | null {
+  if (!quotes || quotes.length === 0) return null;
+
+  // 1. Explicit DB flag
+  const explicit = quotes.find((q: any) => q.is_best || q.is_selected);
+  if (explicit) return explicit;
+
+  // 2. Sort by estimated_total — exclude per_kg without estimated_total (unusable for comparison)
+  const comparable = quotes.filter(
+    (q: any) =>
+      !(q.price_unit === "per_kg" && !q.estimated_total) &&
+      Number(q.estimated_total || q.price || 0) > 0
+  );
+
+  if (comparable.length > 0) {
+    return [...comparable].sort((a, b) => {
+      const pa = Number(a.estimated_total || a.price || Infinity);
+      const pb = Number(b.estimated_total || b.price || Infinity);
+      return pa - pb;
+    })[0];
+  }
+
+  // 3. Last resort — first quote as before
+  return quotes[0];
+}
+
 // ─── 1С request text parser ──────────────────────────────────────────────────
 function OneСRequestBlock({ raw }: { raw: string }) {
   const text = fixEncoding(raw);
@@ -199,13 +229,7 @@ function QuotesSummaryCard({ quotes, bestQuote }: { quotes: any[]; bestQuote: an
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
 
-  const cheapest = [...quotes].sort((a, b) => {
-    const pa = Number(a.estimated_total || a.price || Infinity);
-    const pb = Number(b.estimated_total || b.price || Infinity);
-    return pa - pb;
-  })[0];
-
-  const displayBest = bestQuote || cheapest;
+  const displayBest = bestQuote || pickBestQuote(quotes);
   const bestPrice = displayBest ? Number(displayBest.estimated_total || displayBest.price || 0) : minPrice;
   const bestCurrency = displayBest?.currency || quotes[0]?.currency || "";
   const bestName = displayBest?.contractor?.name || "—";
@@ -598,7 +622,10 @@ export function RequestDetailView({
   };
 
   const { request: r, outreach, quotes, clarifications } = data;
-  const bestQuote = quotes.find((q: any) => q.is_best || q.is_selected) || quotes[0];
+
+  // ── Use smart best-quote selection ──
+  const bestQuote = pickBestQuote(quotes);
+
   const statusBadge = requestStatusBadge(r.status);
 
   return (
