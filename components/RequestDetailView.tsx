@@ -294,17 +294,14 @@ function QuotesSummaryCard({ quotes, bestQuote }: { quotes: any[]; bestQuote: an
             </div>
             <div className="text-xs text-slate-400 mt-0.5">Средняя: {formatPrice(avgPrice, bestCurrency)}</div>
           </div>
-          {hasMixedPorts && (
-            <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
-              <span className="mt-0.5">⚠️</span>
-              <div>
-                <span className="font-semibold">Ставки по разным портам: {uniquePorts.join(", ")}.</span>
-                {" "}Прямое сравнение некорректно — добавьте стоимость ЖД/авто от порта до конечного города.
-              </div>
+        )}
+        {hasMixedPorts && (
+          <div className="w-full mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
+            <span className="mt-0.5">⚠️</span>
+            <div>
+              <span className="font-semibold">Ставки по разным портам: {uniquePorts.join(", ")}.</span>
+              {" "}Прямое сравнение некорректно — добавьте стоимость ЖД/авто от порта до конечного города.
             </div>
-            {savingsVsAvg > 0 && (
-              <div className="text-xs text-emerald-600 font-medium mt-0.5">Лучшая на {savingsVsAvg}% дешевле</div>
-            )}
           </div>
         )}
       </div>
