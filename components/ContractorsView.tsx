@@ -556,12 +556,21 @@ function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded
   const [form, setForm] = useState({
     name: "", email: "", phone: "",
     contact_name: "", contact_language: "ru", has_contract: false, notes: "",
+    whatsapp_phone: "", wechat: "", telegram_username: "",
+    transport_modes: [] as string[],
+    origin_countries: "", dest_countries: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
 
   const set = (key: string, val: any) => setForm((f) => ({ ...f, [key]: val }));
+  const toggleMode = (mode: string) => setForm((f) => ({
+    ...f,
+    transport_modes: f.transport_modes.includes(mode)
+      ? f.transport_modes.filter((m) => m !== mode)
+      : [...f.transport_modes, mode],
+  }));
 
   const submit = async () => {
     if (!form.name.trim() || !form.email.trim()) {
@@ -654,7 +663,7 @@ function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded
           {/* Phone + Contract */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">Телефон</label>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Телефон <span className="text-slate-400 font-normal">(опц.)</span></label>
               <input
                 value={form.phone} onChange={(e) => set("phone", e.target.value)}
                 placeholder="+7 999 123-45-67"
@@ -673,9 +682,88 @@ function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded
             </div>
           </div>
 
+          {/* Messengers */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">WhatsApp <span className="text-slate-400 font-normal">(опц.)</span></label>
+              <input
+                value={form.whatsapp_phone} onChange={(e) => set("whatsapp_phone", e.target.value)}
+                placeholder="+86 139..."
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">WeChat <span className="text-slate-400 font-normal">(опц.)</span></label>
+              <input
+                value={form.wechat} onChange={(e) => set("wechat", e.target.value)}
+                placeholder="wechat_id"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Telegram <span className="text-slate-400 font-normal">(опц.)</span></label>
+              <input
+                value={form.telegram_username} onChange={(e) => set("telegram_username", e.target.value)}
+                placeholder="@username"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+              />
+            </div>
+          </div>
+
+          {/* Transport modes */}
+          <div>
+            <label className="text-sm font-medium text-slate-700 mb-2 block">Виды транспорта <span className="text-slate-400 font-normal">(опц.)</span></label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "auto", label: "🚛 Авто" },
+                { key: "rail", label: "🚂 ЖД" },
+                { key: "sea", label: "🚢 Море" },
+                { key: "air", label: "✈️ Авиа" },
+                { key: "assembly", label: "📦 Сборка" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleMode(key)}
+                  className={`px-3 py-1.5 text-sm rounded-lg border transition ${
+                    form.transport_modes.includes(key)
+                      ? "bg-inlogik-500 text-white border-inlogik-500"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-inlogik-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Routes */}
+          {form.transport_modes.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-1 block">Откуда <span className="text-slate-400 font-normal">(опц.)</span></label>
+                <input
+                  value={form.origin_countries} onChange={(e) => set("origin_countries", e.target.value)}
+                  placeholder="CN, TR, EU..."
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+                />
+                <div className="text-[11px] text-slate-400 mt-1">Через запятую: CN, TR, DE</div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-1 block">Куда <span className="text-slate-400 font-normal">(опц.)</span></label>
+                <input
+                  value={form.dest_countries} onChange={(e) => set("dest_countries", e.target.value)}
+                  placeholder="RU, KZ..."
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
+                />
+                <div className="text-[11px] text-slate-400 mt-1">Через запятую: RU, KZ</div>
+              </div>
+            </div>
+          )}
+
           {/* Notes */}
           <div>
-            <label className="text-sm font-medium text-slate-700 mb-1 block">Заметка</label>
+            <label className="text-sm font-medium text-slate-700 mb-1 block">Заметка <span className="text-slate-400 font-normal">(опц.)</span></label>
             <textarea
               value={form.notes} onChange={(e) => set("notes", e.target.value)}
               placeholder="Специализация, маршруты, особенности…"
@@ -725,3 +813,4 @@ function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded
     </div>
   );
 }
+
