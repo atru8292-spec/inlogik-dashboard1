@@ -803,9 +803,22 @@ export function RequestDetailView({
               quotes={quotes}
               bestQuote={bestQuote}
               requestInfo={{
-                route: [data?.request?.ai_origin_city, data?.request?.ai_dest_city].filter(Boolean).join(" → ") || data?.request?.raw_text?.slice(0, 80),
-                cargo: data?.request?.cargo_description,
+                route: [data?.request?.ai_origin_city, data?.request?.ai_dest_city].filter(Boolean).join(" → "),
+                originCountry: data?.request?.ai_origin_country,
+                destCountry: data?.request?.ai_dest_country,
+                deliveryAddress: data?.request?.ai_delivery_address,
+                loadingAddress: data?.request?.ai_loading_address,
+                cargo: data?.request?.ai_cargo_name,
+                weightKg: data?.request?.ai_weight_kg,
+                volumeCbm: data?.request?.ai_volume_cbm,
+                pieces: data?.request?.ai_pieces,
+                containerType: data?.request?.ai_container_type,
+                transportMode: data?.request?.ai_transport_mode,
                 incoterms: data?.request?.ai_incoterms,
+                customsBy: data?.request?.ai_customs_by,
+                specialNotes: data?.request?.ai_special_notes,
+                customer: data?.request?.customer,
+                hsCode: data?.request?.ai_hs_code,
               }}
             />
 
