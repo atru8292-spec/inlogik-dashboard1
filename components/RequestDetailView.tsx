@@ -7,7 +7,7 @@ import {
   ArrowLeft, Package, Truck, MapPin, FileText, Star, Paperclip,
   ChevronDown, ChevronRight, ClipboardList, Archive, Mail,
   MessageCircle, Clock, CheckCircle2, XCircle, AlertTriangle,
-  ArrowUpDown, Globe,,
+  ArrowUpDown, Globe,
   Sparkles,
   Loader2} from "lucide-react";
 import { useRealtimeRefresh } from "@/lib/use-realtime";
