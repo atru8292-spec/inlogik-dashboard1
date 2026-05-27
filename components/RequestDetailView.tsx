@@ -236,6 +236,15 @@ function QuotesSummaryCard({ quotes, bestQuote }: { quotes: any[]; bestQuote: an
   const bestScore = displayBest?.contractor?.priority_score;
   const savingsVsAvg = avgPrice > 0 && bestPrice > 0 ? Math.round((1 - bestPrice / avgPrice) * 100) : 0;
 
+  // Проверяем разные порты назначения
+  const terminalDests = quotes
+    .map((q: any) => q.notes?.match(/(Владивосток|Новороссийск|Санкт-Петербург|СПб|Восточный|Врангель|ВМТП)/i)?.[1] 
+      || q.contractor?.name?.match(/(Владивосток|Новороссийск|Санкт-Петербург|СПб)/i)?.[1] 
+      || null)
+    .filter(Boolean);
+  const uniquePorts = [...new Set(terminalDests)];
+  const hasMixedPorts = uniquePorts.length > 1;
+
   const noTransit = quotes.filter((q: any) => !q.transit_days && !q.transit_days_min).length;
   const noIncoterms = quotes.filter((q: any) => !q.incoterms).length;
   const currencies = [...new Set(quotes.map((q: any) => q.currency).filter(Boolean))];
@@ -245,6 +254,7 @@ function QuotesSummaryCard({ quotes, bestQuote }: { quotes: any[]; bestQuote: an
   if (displayBest?.transit_days) reasons.push(`транзит ${displayBest.transit_days} дн`);
   else if (displayBest?.transit_days_min && displayBest?.transit_days_max) reasons.push(`транзит ${displayBest.transit_days_min}–${displayBest.transit_days_max} дн`);
   if (bestScore && bestScore >= 60) reasons.push(`надёжный подрядчик (рейтинг ${bestScore})`);
+  if (hasMixedPorts) reasons.push("⚠️ разные порты — сравнение неточное");
   if (displayBest?.incoterms) reasons.push(displayBest.incoterms);
 
   const warnings: string[] = [];
@@ -283,6 +293,15 @@ function QuotesSummaryCard({ quotes, bestQuote }: { quotes: any[]; bestQuote: an
               {formatPrice(minPrice, bestCurrency)} — {formatPrice(maxPrice, bestCurrency)}
             </div>
             <div className="text-xs text-slate-400 mt-0.5">Средняя: {formatPrice(avgPrice, bestCurrency)}</div>
+          </div>
+          {hasMixedPorts && (
+            <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
+              <span className="mt-0.5">⚠️</span>
+              <div>
+                <span className="font-semibold">Ставки по разным портам: {uniquePorts.join(", ")}.</span>
+                {" "}Прямое сравнение некорректно — добавьте стоимость ЖД/авто от порта до конечного города.
+              </div>
+            </div>
             {savingsVsAvg > 0 && (
               <div className="text-xs text-emerald-600 font-medium mt-0.5">Лучшая на {savingsVsAvg}% дешевле</div>
             )}
@@ -438,6 +457,7 @@ function QuotesComparisonTable({ quotes, bestQuoteId }: { quotes: any[]; bestQuo
             <th className="text-left px-3 py-2.5">Подрядчик</th>
             <SortHeader label="Цена" col="price" className="text-right" />
             <th className="text-left px-3 py-2.5">Условия</th>
+            <th className="text-left px-3 py-2.5">Порт / терминал</th>
             <SortHeader label="Транзит" col="transit" className="text-center" />
             <th className="text-left px-3 py-2.5">Включено / Не включено</th>
             <th className="text-left px-3 py-2.5">Предупреждения</th>
@@ -481,6 +501,20 @@ function QuotesComparisonTable({ quotes, bestQuoteId }: { quotes: any[]; bestQuo
                 <td className="px-3 py-2.5">
                   <span className="badge badge-muted">{q.incoterms || "—"}</span>
                   {q.container_type && <div className="text-[11px] text-slate-400 mt-0.5">{q.container_type}</div>}
+                </td>
+                <td className="px-3 py-2.5 text-xs text-slate-600">
+                  {(() => {
+                    const portMatch = (q.notes || "").match(/(Владивосток|Новороссийск|Санкт-Петербург|СПб|Восточный|Врангель|ВМТП|Белый Раст|Ворсино|Электроугли)/i)
+                      || (q.contractor?.name || "").match(/(Владивосток|Новороссийск|Санкт-Петербург|СПб)/i);
+                    const port = portMatch?.[1] || null;
+                    return port ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] font-medium">
+                        🚢 {port}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    );
+                  })()}
                 </td>
                 <td className="px-3 py-2.5 text-center tabular-nums text-sm">
                   {q.transit_days_min && q.transit_days_max
@@ -951,3 +985,4 @@ function Field({ label, children, icon: Icon }: { label: string; children: React
     </div>
   );
 }
+
