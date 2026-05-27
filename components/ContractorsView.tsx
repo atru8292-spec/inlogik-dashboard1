@@ -556,7 +556,6 @@ function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded
   const [form, setForm] = useState({
     name: "", email: "", phone: "",
     contact_name: "", contact_language: "ru", has_contract: false, notes: "",
-    whatsapp_phone: "", wechat: "", telegram_username: "",
     transport_modes: [] as string[],
     origin_countries: "", dest_countries: "",
   });
@@ -575,6 +574,10 @@ function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded
   const submit = async () => {
     if (!form.name.trim() || !form.email.trim()) {
       setError("Название и email обязательны");
+      return;
+    }
+    if (form.transport_modes.length === 0) {
+      setError("Выберите хотя бы один вид транспорта");
       return;
     }
     setSaving(true);
@@ -682,37 +685,9 @@ function AddContractorModal({ onClose, onAdded }: { onClose: () => void; onAdded
             </div>
           </div>
 
-          {/* Messengers */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">WhatsApp <span className="text-slate-400 font-normal">(опц.)</span></label>
-              <input
-                value={form.whatsapp_phone} onChange={(e) => set("whatsapp_phone", e.target.value)}
-                placeholder="+86 139..."
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">WeChat <span className="text-slate-400 font-normal">(опц.)</span></label>
-              <input
-                value={form.wechat} onChange={(e) => set("wechat", e.target.value)}
-                placeholder="wechat_id"
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">Telegram <span className="text-slate-400 font-normal">(опц.)</span></label>
-              <input
-                value={form.telegram_username} onChange={(e) => set("telegram_username", e.target.value)}
-                placeholder="@username"
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-inlogik-400"
-              />
-            </div>
-          </div>
-
           {/* Transport modes */}
           <div>
-            <label className="text-sm font-medium text-slate-700 mb-2 block">Виды транспорта <span className="text-slate-400 font-normal">(опц.)</span></label>
+            <label className="text-sm font-medium text-slate-700 mb-2 block">Виды транспорта *</label>
             <div className="flex flex-wrap gap-2">
               {[
                 { key: "auto", label: "🚛 Авто" },
