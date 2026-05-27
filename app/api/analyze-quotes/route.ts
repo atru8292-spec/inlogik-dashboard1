@@ -22,7 +22,6 @@ export async function POST(request: Request) {
       const included = q.included?.length ? q.included.join(", ") : "не указано";
       const excluded = q.excluded?.length ? q.excluded.join(", ") : "—";
       const warnings = q.hidden_cost_warnings?.length ? q.hidden_cost_warnings.join("; ") : "—";
-      const rating = q.contractor?.priority_score ? `${q.contractor.priority_score}/100` : "нет данных";
       const valid = q.valid_until ? `до ${q.valid_until}` : "не указана";
       const notes = q.notes || q.summary_human || "";
 
@@ -34,7 +33,6 @@ export async function POST(request: Request) {
   Включено: ${included}
   НЕ включено: ${excluded}
   Скрытые расходы / предупреждения: ${warnings}
-  Рейтинг подрядчика: ${rating}
   Валидность ставки: ${valid}${notes ? "\n  Примечание: " + notes : ""}`;
     }).join("\n\n");
 
@@ -68,11 +66,6 @@ export async function POST(request: Request) {
 РАЗНЫЕ ПОРТЫ:
 - Ставки через Владивосток и через Новороссийск НЕЛЬЗЯ сравнивать напрямую — разная доп стоимость до конечного города.
 - Если видишь что подрядчики предлагают разные порты — обязательно укажи это.
-
-ПОДРЯДЧИК:
-- Рейтинг 70+ — надёжный, работает стабильно.
-- Рейтинг 50-70 — средний, работал раньше.
-- Рейтинг ниже 50 или "нет данных" — новый или редко отвечает, риск.
 
 СТРУКТУРА ТВОЕГО ОТВЕТА (строго такая, без markdown):
 
