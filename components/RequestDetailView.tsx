@@ -7,8 +7,9 @@ import {
   ArrowLeft, Package, Truck, MapPin, FileText, Star, Paperclip,
   ChevronDown, ChevronRight, ClipboardList, Archive, Mail,
   MessageCircle, Clock, CheckCircle2, XCircle, AlertTriangle,
-  ArrowUpDown, Globe,
-} from "lucide-react";
+  ArrowUpDown, Globe,,
+  Sparkles,
+  Loader2} from "lucide-react";
 import { useRealtimeRefresh } from "@/lib/use-realtime";
 import { LiveIndicator } from "./LiveIndicator";
 import {
@@ -218,8 +219,19 @@ function OutreachProgress({ outreach }: { outreach: any[] }) {
 }
 
 // ─── Quotes AI Summary Card ──────────────────────────────────────────────
-function QuotesSummaryCard({ quotes, bestQuote }: { quotes: any[]; bestQuote: any }) {
+function QuotesSummaryCard({
+  quotes, bestQuote, requestInfo, onBestPicked,
+}: {
+  quotes: any[];
+  bestQuote: any;
+  requestInfo?: { route?: string; cargo?: string; incoterms?: string };
+  onBestPicked?: (quoteId: string) => void;
+}) {
   if (!quotes || quotes.length === 0) return null;
+
+  const [analysis, setAnalysis] = useState<string>("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
 
   const prices = quotes
     .map((q: any) => Number(q.estimated_total || q.price))
@@ -228,95 +240,121 @@ function QuotesSummaryCard({ quotes, bestQuote }: { quotes: any[]; bestQuote: an
   const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  const currencies = [...new Set(quotes.map((q: any) => q.currency).filter(Boolean))];
 
-  const displayBest = bestQuote || pickBestQuote(quotes);
-  const bestPrice = displayBest ? Number(displayBest.estimated_total || displayBest.price || 0) : minPrice;
-  const bestCurrency = displayBest?.currency || quotes[0]?.currency || "";
-  const bestName = displayBest?.contractor?.name || "—";
-  const bestScore = displayBest?.contractor?.priority_score;
-  const savingsVsAvg = avgPrice > 0 && bestPrice > 0 ? Math.round((1 - bestPrice / avgPrice) * 100) : 0;
+  const noTransit = quotes.filter((q: any) => !q.transit_days && !q.transit_days_min).length;
+  const warnings: string[] = [];
+  if (noTransit > quotes.length / 2) warnings.push(`${noTransit} из ${quotes.length} ставок без срока доставки`);
+  if (currencies.length > 1) warnings.push(`разные валюты: ${currencies.join(", ")} — цены приведены приблизительно`);
 
-  // Проверяем разные порты назначения
+  // Mixed ports detection
   const terminalDests = quotes
-    .map((q: any) => q.notes?.match(/(Владивосток|Новороссийск|Санкт-Петербург|СПб|Восточный|Врангель|ВМТП)/i)?.[1] 
-      || q.contractor?.name?.match(/(Владивосток|Новороссийск|Санкт-Петербург|СПб)/i)?.[1] 
-      || null)
+    .map((q: any) => (q.notes || q.contractor?.name || "").match(/(Владивосток|Новороссийск|Санкт-Петербург|СПб|Восточный|Врангель|ВМТП)/i)?.[1] || null)
     .filter(Boolean);
   const uniquePorts = [...new Set(terminalDests)];
   const hasMixedPorts = uniquePorts.length > 1;
 
-  const noTransit = quotes.filter((q: any) => !q.transit_days && !q.transit_days_min).length;
-  const noIncoterms = quotes.filter((q: any) => !q.incoterms).length;
-  const currencies = [...new Set(quotes.map((q: any) => q.currency).filter(Boolean))];
-
-  const reasons: string[] = [];
-  if (savingsVsAvg > 0) reasons.push(`на ${savingsVsAvg}% дешевле средней`);
-  if (displayBest?.transit_days) reasons.push(`транзит ${displayBest.transit_days} дн`);
-  else if (displayBest?.transit_days_min && displayBest?.transit_days_max) reasons.push(`транзит ${displayBest.transit_days_min}–${displayBest.transit_days_max} дн`);
-  if (bestScore && bestScore >= 60) reasons.push(`надёжный подрядчик (рейтинг ${bestScore})`);
-  if (hasMixedPorts) reasons.push("⚠️ разные порты — сравнение неточное");
-  if (displayBest?.incoterms) reasons.push(displayBest.incoterms);
-
-  const warnings: string[] = [];
-  if (noTransit > quotes.length / 2) warnings.push(`${noTransit} из ${quotes.length} ставок без срока доставки`);
-  if (noIncoterms > quotes.length / 2) warnings.push(`${noIncoterms} из ${quotes.length} без условий поставки`);
-  if (currencies.length > 1) warnings.push(`разные валюты: ${currencies.join(", ")} — сравнивайте внимательно`);
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    setAnalysisError("");
+    setAnalysis("");
+    try {
+      const res = await fetch("/api/analyze-quotes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quotes, requestInfo }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Ошибка анализа");
+      setAnalysis(data.analysis);
+    } catch (e: any) {
+      setAnalysisError(e.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   return (
     <div className="card-padded mb-4 bg-gradient-to-r from-inlogik-50/50 to-white border-inlogik-200">
-      <div className="flex items-start gap-4 flex-wrap">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <Star className="h-4 w-4 fill-inlogik-500 text-inlogik-500" />
-            <span className="text-sm font-semibold text-slate-800">Лучшая ставка: {bestName}</span>
-          </div>
-          <div className="text-lg font-bold text-inlogik-700 tabular-nums">
-            {formatPrice(bestPrice, bestCurrency)}
-            {displayBest?.price_unit && displayBest.price_unit !== "total" && (
-              <span className="text-sm text-slate-500 ml-1">/{displayBest.price_unit.replace("per_", "")}</span>
-            )}
-            {displayBest?.estimated_total && displayBest?.price_unit !== "total" && (
-              <span className="text-sm text-slate-500 ml-2">(~{formatPrice(displayBest.estimated_total, bestCurrency)} итого)</span>
-            )}
-          </div>
-          {reasons.length > 0 && (
-            <p className="text-sm text-slate-600 mt-1">{reasons.join(" · ")}</p>
-          )}
-          {displayBest?.summary_human && (
-            <p className="text-sm text-slate-500 mt-1.5 italic">«{displayBest.summary_human}»</p>
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-inlogik-500" />
+          <span className="text-sm font-semibold text-slate-800">
+            Ставок получено: {quotes.length}
+          </span>
+          {prices.length >= 2 && (
+            <span className="text-xs text-slate-400">
+              · {formatPrice(minPrice, currencies[0] || "USD")} — {formatPrice(maxPrice, currencies[0] || "USD")}
+              · средняя {formatPrice(avgPrice, currencies[0] || "USD")}
+            </span>
           )}
         </div>
-        {prices.length >= 2 && (
-          <div className="shrink-0 text-right">
-            <div className="text-xs text-slate-500 mb-1">Диапазон цен</div>
-            <div className="text-sm tabular-nums text-slate-700">
-              {formatPrice(minPrice, bestCurrency)} — {formatPrice(maxPrice, bestCurrency)}
-            </div>
-            <div className="text-xs text-slate-400 mt-0.5">Средняя: {formatPrice(avgPrice, bestCurrency)}</div>
-          </div>
-        )}
-        {hasMixedPorts && (
-          <div className="w-full mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
-            <span className="mt-0.5">⚠️</span>
-            <div>
-              <span className="font-semibold">Ставки по разным портам: {uniquePorts.join(", ")}.</span>
-              {" "}Прямое сравнение некорректно — добавьте стоимость ЖД/авто от порта до конечного города.
-            </div>
-          </div>
-        )}
+        <button
+          onClick={handleAnalyze}
+          disabled={analyzing}
+          className="flex items-center gap-2 px-4 py-2 bg-inlogik-500 text-white rounded-xl text-sm font-medium hover:bg-inlogik-600 transition disabled:opacity-60"
+        >
+          {analyzing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Анализирую…
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              {analysis ? "Обновить анализ" : "Провести анализ"}
+            </>
+          )}
+        </button>
       </div>
-      {warnings.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-inlogik-100 flex flex-wrap gap-3">
+
+      {/* Warnings */}
+      {(warnings.length > 0 || hasMixedPorts) && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {hasMixedPorts && (
+            <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 flex items-center gap-1">
+              ⚠️ Разные порты: {uniquePorts.join(", ")} — сравнение неточное
+            </span>
+          )}
           {warnings.map((w, i) => (
-            <span key={i} className="text-xs text-amber-700 flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" /> {w}
+            <span key={i} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3 shrink-0" /> {w}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {analysisError && (
+        <div className="px-3 py-2 bg-rose-50 text-rose-700 text-sm rounded-xl mb-3">
+          {analysisError}
+        </div>
+      )}
+
+      {/* Analysis result */}
+      {analysis && (
+        <div className="mt-1 p-4 bg-white border border-inlogik-200 rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-inlogik-500" />
+            <span className="text-sm font-semibold text-slate-800">Анализ ставок</span>
+          </div>
+          <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+            {analysis}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state — before analysis */}
+      {!analysis && !analyzing && (
+        <div className="text-sm text-slate-400 italic">
+          Нажмите «Провести анализ» — AI сравнит все ставки и объяснит какую выбрать и почему.
         </div>
       )}
     </div>
   );
 }
+
 
 // ─── Quotes comparison table ─────────────────────────────────────────────────
 type QuoteSortKey = "price" | "transit" | "created";
@@ -761,7 +799,15 @@ export function RequestDetailView({
         ) : (
           <>
             {/* AI Summary Card */}
-            <QuotesSummaryCard quotes={quotes} bestQuote={bestQuote} />
+            <QuotesSummaryCard
+              quotes={quotes}
+              bestQuote={bestQuote}
+              requestInfo={{
+                route: [data?.request?.ai_origin_city, data?.request?.ai_dest_city].filter(Boolean).join(" → ") || data?.request?.raw_text?.slice(0, 80),
+                cargo: data?.request?.cargo_description,
+                incoterms: data?.request?.ai_incoterms,
+              }}
+            />
 
             <QuotesComparisonTable quotes={quotes} bestQuoteId={bestQuote?.id || null} />
 
