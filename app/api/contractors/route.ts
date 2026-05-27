@@ -6,7 +6,11 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, contact_name, contact_language, has_contract, notes } = body;
+    const {
+      name, email, phone, contact_name, contact_language, has_contract, notes,
+      whatsapp_phone, wechat, telegram_username,
+      transport_modes, origin_countries, dest_countries,
+    } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Название обязательно" }, { status: 400 });
@@ -39,6 +43,9 @@ export async function POST(request: Request) {
         contact_name: contact_name?.trim() || null,
         contact_language: contact_language || "ru",
         has_contract: has_contract || false,
+        whatsapp_phone: whatsapp_phone?.trim() || null,
+        wechat: wechat?.trim() || null,
+        telegram_username: telegram_username?.replace("@", "").trim() || null,
         priority_score: 50,
         bounce_count: 0,
         blacklisted: false,
@@ -48,6 +55,25 @@ export async function POST(request: Request) {
       .single();
 
     if (error) throw error;
+
+    // Save capabilities if transport modes provided
+    if (transport_modes && transport_modes.length > 0) {
+      const originArr = origin_countries
+        ? origin_countries.split(",").map((s: string) => s.trim().toUpperCase()).filter(Boolean)
+        : null;
+      const destArr = dest_countries
+        ? dest_countries.split(",").map((s: string) => s.trim().toUpperCase()).filter(Boolean)
+        : null;
+
+      const caps = transport_modes.map((mode: string) => ({
+        contractor_id: data.id,
+        transport_mode: mode,
+        origin_countries: originArr,
+        dest_countries: destArr,
+      }));
+
+      await supabaseAdmin.from("contractor_capabilities").insert(caps);
+    }
 
     // Save note if provided
     if (notes?.trim()) {
