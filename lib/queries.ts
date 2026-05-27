@@ -69,6 +69,7 @@ export async function getRequestByCode(code: string) {
       incoterms, container_type, valid_until, included, excluded, hidden_cost_warnings,
       notes, ai_confidence, is_best, is_selected, created_at, attachment_urls,
       summary_human, local_charges_breakdown, freight_amount,
+      terminal_origin, terminal_dest, customs_included,
       inbound_message_id,
       contractor:contractors(id, name, email, priority_score),
       inbound:inbound_messages!inbound_message_id(body_text, attachment_urls)
