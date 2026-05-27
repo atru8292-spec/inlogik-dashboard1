@@ -8,7 +8,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       name, email, phone, contact_name, contact_language, has_contract, notes,
-      whatsapp_phone, wechat, telegram_username,
       transport_modes, origin_countries, dest_countries,
     } = body;
 
@@ -43,9 +42,6 @@ export async function POST(request: Request) {
         contact_name: contact_name?.trim() || null,
         contact_language: contact_language || "ru",
         has_contract: has_contract || false,
-        whatsapp_phone: whatsapp_phone?.trim() || null,
-        wechat: wechat?.trim() || null,
-        telegram_username: telegram_username?.replace("@", "").trim() || null,
         priority_score: 50,
         bounce_count: 0,
         blacklisted: false,
