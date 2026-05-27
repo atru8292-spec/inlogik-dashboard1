@@ -24,6 +24,9 @@ export async function POST(request: Request) {
       const warnings = q.hidden_cost_warnings?.length ? q.hidden_cost_warnings.join("; ") : "—";
       const valid = q.valid_until ? `до ${q.valid_until}` : "не указана";
       const notes = q.notes || q.summary_human || "";
+      const emailBody = q.email_body
+        ? q.email_body.replace(/\s+/g, " ").trim().slice(0, 400)
+        : "";
 
       return `[${i + 1}] ${q.contractor?.name || "Неизвестный"}
   Цена: ${priceRaw}${priceUSD ? " " + priceUSD : ""}
@@ -33,7 +36,7 @@ export async function POST(request: Request) {
   Включено: ${included}
   НЕ включено: ${excluded}
   Скрытые расходы / предупреждения: ${warnings}
-  Валидность ставки: ${valid}${notes ? "\n  Примечание: " + notes : ""}`;
+  Валидность ставки: ${valid}${notes ? "\n  Примечание: " + notes : ""}${emailBody ? "\n  Из письма: " + emailBody : ""}`;
     }).join("\n\n");
 
     const systemPrompt = `Ты — старший логист с 10+ годами опыта в международных грузоперевозках (Китай, Европа, Турция → Россия). 
@@ -94,15 +97,27 @@ export async function POST(request: Request) {
 
 Пиши по-русски. Без звёздочек, решёток, дефисов-маркеров. Просто текст.`;
 
-    const userPrompt = `Маршрут: ${requestInfo?.route || "не указан"}
-Груз: ${requestInfo?.cargo || "не указан"}
-Условия поставки: ${requestInfo?.incoterms || "не указаны"}
+    const r = requestInfo || {};
+    const userPrompt = `=== ЗАПРОС ===
+Маршрут: ${r.route || "не указан"}${r.originCountry ? " (" + r.originCountry + ")" : ""}${r.destCountry ? " → " + r.destCountry : ""}
+Адрес забора: ${r.loadingAddress || "не указан"}
+Адрес доставки: ${r.deliveryAddress || "не указан"}
+Клиент: ${r.customer || "не указан"}
+Груз: ${r.cargo || "не указан"}${r.hsCode ? " (код ТН ВЭД: " + r.hsCode + ")" : ""}
+Вес: ${r.weightKg ? r.weightKg + " кг" : "не указан"}
+Объём: ${r.volumeCbm ? r.volumeCbm + " м³" : "не указан"}
+Количество мест: ${r.pieces || "не указано"}
+Контейнер: ${r.containerType || "не указан"}
+Вид транспорта: ${r.transportMode || "не указан"}
+Условия поставки: ${r.incoterms || "не указаны"}
+Таможня: ${r.customsBy || "не указано"}
+Особые условия: ${r.specialNotes || "нет"}
 
-Получено ставок: ${quotes.length}
+=== СТАВКИ (${quotes.length} шт.) ===
 
 ${quotesText}
 
-Проведи анализ. Выбери лучшую ставку и объясни почему.`;
+Посчитай итоговую стоимость для каждой ставки и выбери самую дешёвую под ключ. Объясни выбор.`;
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
