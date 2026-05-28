@@ -527,7 +527,7 @@ function QuotesComparisonTable({ quotes, bestQuoteId }: { quotes: any[]; bestQuo
                     )}
                   </div>
                   {q.estimated_total && (
-                    <div className="text-[11px] text-inlogik-600 font-medium">~{formatPrice(q.estimated_total, q.currency)}</div>
+                    <div className="text-[11px] text-inlogik-600 font-medium">~${Number(q.estimated_total).toLocaleString("ru", {maximumFractionDigits: 0})} USD</div>
                   )}
                   {q.local_charges_breakdown && (
                     <div className="text-[10px] text-slate-400 mt-0.5">{q.local_charges_breakdown}</div>
@@ -869,7 +869,7 @@ export function RequestDetailView({
                             )}
                           </div>
                           {q.estimated_total && (
-                            <div className="text-xs text-inlogik-700 font-medium">~{formatPrice(q.estimated_total, q.currency)}</div>
+                            <div className="text-xs text-inlogik-700 font-medium">~${Number(q.estimated_total).toLocaleString("ru", {maximumFractionDigits: 0})} USD</div>
                           )}
                         </div>
                         <div>
