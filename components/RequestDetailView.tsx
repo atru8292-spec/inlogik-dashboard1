@@ -39,6 +39,7 @@ function fixEncoding(text: string): string {
 //           2) cheapest by estimated_total (skip per_kg quotes without estimated_total)
 //           3) cheapest by raw price as last resort
 function pickBestQuote(quotes: any[]): any | null {
+  return null; // Disabled — use AI analysis button
   if (!quotes || quotes.length === 0) return null;
 
   // 1. Explicit DB flag
