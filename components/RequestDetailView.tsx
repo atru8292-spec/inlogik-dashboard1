@@ -285,8 +285,8 @@ function QuotesSummaryCard({
           </span>
           {prices.length >= 2 && (
             <span className="text-xs text-slate-400">
-              · {formatPrice(minPrice, currencies[0] || "USD")} — {formatPrice(maxPrice, currencies[0] || "USD")}
-              · средняя {formatPrice(avgPrice, currencies[0] || "USD")}
+              · ${minPrice.toLocaleString("ru", {maximumFractionDigits: 0})} — ${maxPrice.toLocaleString("ru", {maximumFractionDigits: 0})} USD
+              · средняя ~${avgPrice.toLocaleString("ru", {maximumFractionDigits: 0})} USD
             </span>
           )}
         </div>
